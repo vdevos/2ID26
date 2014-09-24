@@ -8,3 +8,5 @@ http://git-scm.com/book/en/Getting-Started-First-Time-Git-Setup
 ### LaTeX
 http://miktex.org/2.9/setup
 
+### NLTK
+http://www.nltk.org/
