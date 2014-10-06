@@ -1,6 +1,11 @@
-# Dataset is deels corrupt? Sommige regels bevatten meer dan 5 columns
+# ToDo
 
-cat 2id26_dataset_orig.csv | awk -F',' '{ print NF; }' | sort | uniq -c | sort
+## Corrupte dataset
+
+Sommige regels bevatten meer dan 5 columns?
+
+```
+> cat 2id26_dataset_orig.csv | awk -F',' '{ print NF; }' | sort | uniq -c | sort
     111 2
     115 4
      14 8
@@ -12,3 +17,4 @@ cat 2id26_dataset_orig.csv | awk -F',' '{ print NF; }' | sort | uniq -c | sort
       3 9
      71 1
       8 3
+```
