@@ -31,7 +31,8 @@ class Indexer:
         
         # set default instance variables
         self.MODE = mode
-        self.index_meta = {}
+
+        self.index_terms_meta = {}
         self.index_terms = {}
         self.index_tweets = {}        
     
@@ -56,41 +57,36 @@ class Indexer:
                             if not term == "":
                                 self.IndexTerm(term, tweetid)
                 
-                print "\nExample: get tweets for the term '#yolo'"
-                tweets = self.GetTweetsForTerm('#yolo')
-                for tweetid in tweets:
-                    print " %s" % tweetid
                 
-                print "\nExample: show occurrence of indexed terms"
+                print "\nExample: show top 5 indexed terms sorted by occurrence (descending) and the tweets(id) they occur in"
                 termsbyoccurrence = self.GetIndexedTermsByOccurrence()    
-                for term in termsbyoccurrence:
-                    print " %s   %s" % (term[1],term[0])
-            
+                for term in termsbyoccurrence[0:5]:
+                    print " %s  %s" % (term[1],term[0])
+                    tweets = self.GetTweetsForTerm(term[0], withFrequency=True)
+                    for tweet in sorted(tweets.items(), reverse=True):
+                        print "    - %s (%s)" % (tweet[0], tweet[1])
+                
             # index terms
             if self.MODE == 'terms':
                 for line in [ line.strip() for line in content ]:
                     print line
     
-    def ListIndexedTerms(self):
-        
-        sorted_index_terms = sorted( self.index_terms.items(), key=operator.itemgetter(1), reverse=True)
-        for term in sorted_index_terms:
-            print term[0]
-            for tweetid,val in term[1].iteritems():
-                print "  %s (%s)" % (tweetid, val)
-    
-    def GetTweetsForTerm(self, term):
+    def GetTweetsForTerm(self, term, withFrequency=False):
         
         if term in self.index_terms.keys():
-            return self.index_terms[term].keys() 
+            if not withFrequency:
+                return self.index_terms[term].keys() 
+            else:
+                return self.index_terms[term]
         return []
+    
             
     def GetIndexedTermsByOccurrence(self):
         
         terms = { }
 
         for term in self.index_terms.keys():
-            terms[term] = self.index_meta[term]['total']
+            terms[term] = self.index_terms_meta[term]['total']
         
         return sorted(terms.items(), key=operator.itemgetter(1), reverse=True)
 
@@ -100,7 +96,7 @@ class Indexer:
 
         # If the UT has no TweetID's yet first construct a dict for storage
         if not term in self.index_terms.keys():
-            self.index_meta[term] = { 'total':0 }
+            self.index_terms_meta[term] = { 'total':0 }
             self.index_terms[term] = { }
 
         # Just set a TweetID as key with value of 1
@@ -108,7 +104,7 @@ class Indexer:
             self.index_terms[term][tweetid] = 0
         
         self.index_terms[term][tweetid] += 1
-        self.index_meta[term]['total'] += 1
+        self.index_terms_meta[term]['total'] += 1
     
     # Return list containing the TweetID's for every Tweet in which the term occurs
     def GetIndexedTerms(self):
