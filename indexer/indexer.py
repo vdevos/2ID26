@@ -10,10 +10,14 @@ VERSION = (0,0,1)
 import os
 import re
 import sys
+import json
+import math
+import pickle
 import operator
 import argparse
 
 # http://www.nltk.org/api/nltk.tokenize.html#nltk.tokenize.punkt.PunktWordTokenizer
+from nltk.corpus import stopwords
 from nltk.tokenize.punkt import PunktWordTokenizer
 
 class Indexer:
@@ -22,20 +26,90 @@ class Indexer:
     The Indexer is responsible for indexing terms and tweets with all extra index-information provided
     """
     
-    def __init__(self, mode):
+    def __init__(self, args):
         
-        # parse indexer mode
-        self.MODES = ('tweets','terms')
-        if not mode in self.MODES:
-            error("Modus not recognized, try: %s" % ', '.join(self.MODES))
-        
-        # set default instance variables
-        self.MODE = mode
+        self.args = args
 
-        self.index_terms_meta = {}
+        # define indexer arguments/parameter input
+        self.ACTIONS = ('index','list','get','cluster')
+        self.GET_ACTIONS = ('term','tweet')
+
+        # parse indexer action
+        if not args.action[0] in self.ACTIONS:
+            error("Action not recognized, try: %s" % ', '.join(self.ACTIONS))
+        self.ACTION = args.action[0]
+        
+        # parse action.get 
+        if self.ACTION == 'get':
+            if not len(args.action) > 2:
+                error("Expected extra parameter(s)")
+            if not args.action[1] in self.GET_ACTIONS:
+                error("Invallid parameter, try: %s" % ', '.join(self.GET_ACTIONS))
+            self.ACTION_GET = args.action[1]
+            self.ACTION_GET_VAL = args.action[2]
+        
+        elif self.ACTION == 'cluster':
+            if not len(args.action) > 1:
+                error("Expected extra parameter(s)")
+            self.ACTION_CLUSTER_VAL = args.action[1]
+
+        # instance variables
+        self.index_matrix = {}
         self.index_terms = {}
+        self.index_terms_meta = {}
         self.index_tweets = {}        
+        
+        self.LoadIndexes()    
+        self.PerformAction()
     
+    def PerformAction(self):
+            
+        if self.ACTION == 'index':
+            self.IndexFile(self.args.file)
+        
+        elif self.ACTION == 'get':
+
+            if self.ACTION_GET == 'term':
+                tweets = self.GetTweetsForTerm(self.ACTION_GET_VAL)
+                for tweet in tweets:
+                    print tweet
+
+            elif self.ACTION_GET == 'tweet':
+                print " ".join(self.GetTweetForTweetid(self.ACTION_GET_VAL))
+
+        elif self.ACTION == 'list':
+            self.List()
+        
+        elif self.ACTION == 'cluster':
+            self.ClusterTerms(self.ACTION_CLUSTER_VAL)
+
+    def StoreIndexes(self):
+        
+        # for every index we keep, we write a pickled file to disk
+        pickle.dump(self.index_matrix, open("index_matrix.index", "wb"))
+        pickle.dump(self.index_terms, open("index_terms.index", "wb"))
+        pickle.dump(self.index_terms_meta, open("index_terms_meta.index", "wb"))
+        pickle.dump(self.index_tweets, open("index_tweets.index", "wb"))
+    
+    def LoadIndexes(self):
+        
+        # try to load stored indexes from disk
+        if os.path.isfile('index_matrix.index'):
+            self.index_matrix = pickle.load(open("index_matrix.index", "rb"))
+        if os.path.isfile('index_terms.index'):
+            self.index_terms = pickle.load(open("index_terms.index", "rb"))
+        if os.path.isfile('index_terms_meta.index'):
+            self.index_terms_meta = pickle.load(open("index_terms_meta.index", "rb"))
+        if os.path.isfile('index_tweets.index'):
+            self.index_tweets = pickle.load(open("index_tweets.index", "rb"))
+
+    def Tokenize(self, text):
+        words = []
+        for term in re.split('[,\s]', text):
+            if len(term) > 1 and not term.decode('utf-8') in stopwords.words('english'):
+                words.append(term)
+        return words
+
     def IndexFile(self, fname):
         
         # make sure file exists
@@ -44,33 +118,94 @@ class Indexer:
         
         # read file and itterate over the lines
         with open(fname) as fd:
-            content = fd.readlines()
 
-            # index tweets
-            if self.MODE == 'tweets':
-                for line in content:
-                    data = line.strip().split(';')
-                    if len(data) >= 2:
-                        tweetid = data[0]
-                        tweettext = data[1].lower()
-                        for term in re.split('[,\s]', tweettext): # PunktWordTokenizer().tokenize(tweettext):
-                            if not term == "":
-                                self.IndexTerm(term, tweetid)
-                
-                
-                print "\nExample: show top 5 indexed terms sorted by occurrence (descending) and the tweets(id) they occur in"
-                termsbyoccurrence = self.GetIndexedTermsByOccurrence()    
-                for term in termsbyoccurrence[0:5]:
-                    print " %s  %s" % (term[1],term[0])
-                    tweets = self.GetTweetsForTerm(term[0], withFrequency=True)
-                    for tweet in sorted(tweets.items(), reverse=True):
-                        print "    - %s (%s)" % (tweet[0], tweet[1])
-                
-            # index terms
-            if self.MODE == 'terms':
-                for line in [ line.strip() for line in content ]:
-                    print line
+            content = fd.readlines()
+            
+            for line in content:
+
+                data = line.strip().split('\t')
+
+                if len(data) >= 2:
+                    
+                    tweetid = data[0]
+                    tweettext = self.Tokenize(data[1].lower())
+                    
+                    for t1 in tweettext:
+                        
+                        # Construct a 2-dimensional matrix holding term-by-term frequency (how many times did a term occur in a tweet together with a other term)
+                        if not t1 in self.index_matrix.keys():
+                            self.index_matrix[t1] = {}
+
+                        for t2 in tweettext:
+                            if not t2 in self.index_matrix[t1].keys():
+                                self.index_matrix[t1][t2] = 0
+
+                        # Construct a index that contains all the tweetid's each time a term occurs in a tweet
+                        self.IndexTerm(t1, tweetid)
+                        
+                        # Construct a index that tracks term-by-term frequence
+                        self.IndexTermByTermFrequency(t1, tweettext)
+
+                    # Construct a index that stores tweets by their tweetid               
+                    self.IndexTweet(tweetid, tweettext)
+            
+        self.StoreIndexes()
     
+    def List(self):
+
+        print "\nExample: show top 5 indexed terms sorted by occurrence (descending) and the tweets(id) they occur in"
+        termsbyoccurrence = self.GetTermsByOccurrence()    
+        for term in termsbyoccurrence[0:5]:
+            print "%s  %s" % (term[1],term[0])
+            tweets = self.GetTweetsForTerm(term[0], withFrequency=True)
+            #for tweet in sorted(tweets.items(), reverse=True):
+            #    print "    - %s (%s)" % (tweet[0], tweet[1])
+        
+        print "\nExample: for the top 5 indexed terms show a top 5 of words that often occured together"
+        for term in termsbyoccurrence[0:5]:
+            print "%s  %s" % (term[1],term[0])
+            terms = self.GetTermsForTerm(term[0])
+            for cterm in terms[0:5]:
+                print "  %s (%s)"  % (cterm[0], cterm[1])
+                
+        # print indexed data
+        #for tweetid, tweettext in self.index_tweets.iteritems():
+        #    print "%s   %s" % (tweetid, tweettext)
+    
+    
+    def ClusterTerms(self, term=None):
+        
+        # Using Euclidean distance (http://en.wikipedia.org/wiki/Euclidean_distance) for simple 'clustering' 
+        # ED = Euclidean Distance
+        # Every term can be represented as a vector in N-space using a vector V = [T1, T2, ..., Tn] 
+        # The values within this vector represent the frequency of the 'main' term with the other terms (each time that other term occurs within a same tweet)
+        
+        # These frequency values are used to calculate the Euclidean distance to every other term in our vector space (except the 'main' term itself)
+        # In the end we end up with a list of terms and a ED-score with respect to the input term
+        # Ignore ED with score 0. Matching: 0 < EDS
+
+        scores = {}
+        
+        for row in self.index_matrix.keys():
+            if not term == row:
+                ed = 0 # Euclidean distance
+                for term1, value1 in self.index_matrix[term].iteritems():
+                    td = 0 # Term delta
+                    if term1 in self.index_matrix[row]:
+                        td = value1 - self.index_matrix[row][term1]
+                    ed += math.pow(td,2)
+                ed = math.floor(math.sqrt(ed))
+                scores[row] = ed
+         
+        scores = sorted(scores.items(), key=operator.itemgetter(1))
+        count = 0
+        for score in scores:
+            if score[1] > 0:
+                print "%s (%s)" % (score[0], score[1])
+                count += 1
+            if count == 25:
+                break
+
     def GetTweetsForTerm(self, term, withFrequency=False):
         
         if term in self.index_terms.keys():
@@ -80,8 +215,14 @@ class Indexer:
                 return self.index_terms[term]
         return []
     
+    def GetTweetForTweetid(self, tweetid):
+
+        if tweetid in self.index_tweets.keys():
+            return self.index_tweets[tweetid]
+        return None
+    
             
-    def GetIndexedTermsByOccurrence(self):
+    def GetTermsByOccurrence(self):
         
         terms = { }
 
@@ -94,11 +235,11 @@ class Indexer:
     # Keep a list of TweetID's for every UT
     def IndexTerm(self, term, tweetid):
 
-        # If the UT has no TweetID's yet first construct a dict for storage
+        # If the term has no TweetID's yet first construct a dict for storage
         if not term in self.index_terms.keys():
             self.index_terms_meta[term] = { 'total':0 }
             self.index_terms[term] = { }
-
+    
         # Just set a TweetID as key with value of 1
         if not tweetid in self.index_terms[term].keys():
             self.index_terms[term][tweetid] = 0
@@ -106,13 +247,22 @@ class Indexer:
         self.index_terms[term][tweetid] += 1
         self.index_terms_meta[term]['total'] += 1
     
-    # Return list containing the TweetID's for every Tweet in which the term occurs
-    def GetIndexedTerms(self):
-        return sorted(self.index_terms)
+    def GetTermsForTerm(self, term):
+        
+        if term in self.index_matrix:
+            return sorted(self.index_matrix[term].items(), key=operator.itemgetter(1), reverse=True)
+        return []
 
+    def IndexTermByTermFrequency(self, term, tweettext):
+        
+        for tterm in tweettext: 
+            self.index_matrix[term][tterm] += 1
+    
     def IndexTweet(self, tweetid, tweet):
-        pass
+        self.index_tweets[tweetid] = tweet
  
+def djson(data):
+    print json.dumps(data, indent=4)
     
 def error(msg):
     sys.stderr.write("%s\n" % msg)
@@ -121,27 +271,16 @@ def error(msg):
 def main(arguments):
     
     parser = argparse.ArgumentParser(prog="Indexer", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("file", metavar='file', type=str, nargs='+', help='Input file used for indexing')
-    parser.add_argument("--mode",    action='store', default=None, required=True, help="index mode: tweets, terms")
+    parser.add_argument("action", metavar='action', type=str, nargs='+', help='Action for the indexer: index, search')
+    parser.add_argument("--file", metavar='file', type=str, help='Input file used for indexing actions')
     parser.add_argument("--version", action='store_true', default=False, help="current version")
     args = parser.parse_args(arguments)
     
     if args.version:
         error("Indexer - Version: %d.%d.%d" % VERSION)
     
-    indexer = Indexer(args.mode)
-    indexer.IndexFile(args.file[0])
-    
-    """
-    indexer.IndexUT('#henk','tweetid_01')
-    indexer.IndexUT('#jan' ,'tweetid_02')
-    indexer.IndexUT('#henk','tweetid_03')
-    indexer.IndexUT('#jan' ,'tweetid_04')
-    indexer.IndexUT('#jan' ,'tweetid_05')
-    
-    for ut in ('#henk','#jan','#piet'):
-        print "%s\t%s" % (ut, ', '.join(indexer.GetTweetsForUT(ut)))
-    """
+    indexer = Indexer(args)
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
