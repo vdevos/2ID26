@@ -18,7 +18,6 @@ import argparse
 
 # http://www.nltk.org/api/nltk.tokenize.html#nltk.tokenize.punkt.PunktWordTokenizer
 from nltk.corpus import stopwords
-from nltk.tokenize.punkt import PunktWordTokenizer
 
 class Indexer:
 
@@ -32,7 +31,7 @@ class Indexer:
 
         # define indexer arguments/parameter input
         self.ACTIONS = ('index','list','get','cluster')
-        self.GET_ACTIONS = ('term','tweet')
+        self.GET_ACTIONS = ('term','tweet', 'idf')
 
         # parse indexer action
         if not args.action[0] in self.ACTIONS:
@@ -54,12 +53,15 @@ class Indexer:
             self.ACTION_CLUSTER_VAL = args.action[1]
 
         # instance variables
-        self.index_matrix = {}
+        self.index_tf = {}
+        self.index_idf = {}
         self.index_terms = {}
-        self.index_terms_meta = {}
+        self.index_matrix = {}
         self.index_tweets = {}        
         
-        self.LoadIndexes()    
+        if not self.ACTION == "index":        
+            self.LoadIndexes()    
+
         self.PerformAction()
     
     def PerformAction(self):
@@ -76,6 +78,9 @@ class Indexer:
 
             elif self.ACTION_GET == 'tweet':
                 print " ".join(self.GetTweetForTweetid(self.ACTION_GET_VAL))
+            
+            elif self.ACTION_GET == 'idf':
+                print self.GetIDFForTerm(self.ACTION_GET_VAL)
 
         elif self.ACTION == 'list':
             self.List()
@@ -86,20 +91,23 @@ class Indexer:
     def StoreIndexes(self):
         
         # for every index we keep, we write a pickled file to disk
+        pickle.dump(self.index_tf, open("index_tf.index", "wb"))
+        pickle.dump(self.index_idf, open("index_idf.index", "wb"))
         pickle.dump(self.index_matrix, open("index_matrix.index", "wb"))
         pickle.dump(self.index_terms, open("index_terms.index", "wb"))
-        pickle.dump(self.index_terms_meta, open("index_terms_meta.index", "wb"))
         pickle.dump(self.index_tweets, open("index_tweets.index", "wb"))
     
     def LoadIndexes(self):
         
         # try to load stored indexes from disk
+        if os.path.isfile('index_idf.index'):
+            self.index_idf = pickle.load(open("index_idf.index", "rb"))
+        if os.path.isfile('index_tf.index'):
+            self.index_tf = pickle.load(open("index_tf.index", "rb"))
         if os.path.isfile('index_matrix.index'):
             self.index_matrix = pickle.load(open("index_matrix.index", "rb"))
         if os.path.isfile('index_terms.index'):
             self.index_terms = pickle.load(open("index_terms.index", "rb"))
-        if os.path.isfile('index_terms_meta.index'):
-            self.index_terms_meta = pickle.load(open("index_terms_meta.index", "rb"))
         if os.path.isfile('index_tweets.index'):
             self.index_tweets = pickle.load(open("index_tweets.index", "rb"))
 
@@ -110,6 +118,7 @@ class Indexer:
                 words.append(term)
         return words
 
+    
     def IndexFile(self, fname):
         
         # make sure file exists
@@ -139,7 +148,7 @@ class Indexer:
                         for t2 in tweettext:
                             if not t2 in self.index_matrix[t1].keys():
                                 self.index_matrix[t1][t2] = 0
-
+                        
                         # Construct a index that contains all the tweetid's each time a term occurs in a tweet
                         self.IndexTerm(t1, tweetid)
                         
@@ -158,9 +167,7 @@ class Indexer:
         for term in termsbyoccurrence[0:5]:
             print "%s  %s" % (term[1],term[0])
             tweets = self.GetTweetsForTerm(term[0], withFrequency=True)
-            #for tweet in sorted(tweets.items(), reverse=True):
-            #    print "    - %s (%s)" % (tweet[0], tweet[1])
-        
+
         print "\nExample: for the top 5 indexed terms show a top 5 of words that often occured together"
         for term in termsbyoccurrence[0:5]:
             print "%s  %s" % (term[1],term[0])
@@ -171,7 +178,6 @@ class Indexer:
         # print indexed data
         #for tweetid, tweettext in self.index_tweets.iteritems():
         #    print "%s   %s" % (tweetid, tweettext)
-    
     
     def ClusterTerms(self, term=None):
         
@@ -215,6 +221,20 @@ class Indexer:
                 return self.index_terms[term]
         return []
     
+    def GetIDFForTerm(self, term):
+        
+        # Calculate TF*IDF for a term
+        # http://en.wikipedia.org/wiki/Tf-idf
+
+        idf = 0.00
+        doccount = float(len(self.index_tweets.keys()))
+
+        if term in self.index_terms.keys():
+            ndt = float(len(self.index_terms[term].keys()))
+            idf = math.log(doccount / ndt)
+        
+        return round(idf,2)
+
     def GetTweetForTweetid(self, tweetid):
 
         if tweetid in self.index_tweets.keys():
@@ -223,29 +243,28 @@ class Indexer:
     
             
     def GetTermsByOccurrence(self):
-        
-        terms = { }
-
-        for term in self.index_terms.keys():
-            terms[term] = self.index_terms_meta[term]['total']
-        
-        return sorted(terms.items(), key=operator.itemgetter(1), reverse=True)
+                
+        return sorted(self.index_tf.items(), key=operator.itemgetter(1), reverse=True)
 
 
     # Keep a list of TweetID's for every UT
     def IndexTerm(self, term, tweetid):
-
+        
         # If the term has no TweetID's yet first construct a dict for storage
         if not term in self.index_terms.keys():
-            self.index_terms_meta[term] = { 'total':0 }
             self.index_terms[term] = { }
-    
+        
         # Just set a TweetID as key with value of 1
         if not tweetid in self.index_terms[term].keys():
             self.index_terms[term][tweetid] = 0
         
+        # Set initial TF
+        if not term in self.index_tf.keys():
+            self.index_tf[term] = 0
+        
+        # Update frequencies
+        self.index_tf[term] += 1
         self.index_terms[term][tweetid] += 1
-        self.index_terms_meta[term]['total'] += 1
     
     def GetTermsForTerm(self, term):
         
@@ -257,7 +276,8 @@ class Indexer:
         
         for tterm in tweettext: 
             self.index_matrix[term][tterm] += 1
-    
+   
+
     def IndexTweet(self, tweetid, tweet):
         self.index_tweets[tweetid] = tweet
  

@@ -22,3 +22,8 @@
 ```
 ./indexer.py get cluster '#yolo'
 ```
+
+### Retrieve IDF for a term 
+```
+./indexer.py get idf '#yolo'
+```
