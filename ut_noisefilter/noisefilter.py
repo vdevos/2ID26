@@ -5,7 +5,7 @@
 # CHANGELOG
 # 0.0.1     Setup initial filter_noise class
 
-VERSION = (0,0,1)
+VERSION = (0,0,2)
  
 import os
 import re
@@ -15,7 +15,10 @@ import math
 import pickle
 import operator
 import argparse
-#import indexer
+
+sys.path.insert(0,"../indexer")
+from indexer import Indexer
+
 
 class NoiseFilter:
 
@@ -37,9 +40,13 @@ class NoiseFilter:
         self.ACTION = args.action[0]
         
         # instance variables
-        self.ut_filtered = {}
         self.output_filename = "ut_filtered.txt"
+        self.output_filename_regex = "ut_filtered_regex.txt"
+        self.output_filename_idf = "ut_filtered_idf.txt"
+
         self.output_filename_noise = "ut_noise.txt"
+        self.output_filename_noise_regex = "ut_noise_regex.txt"
+        self.output_filename_noise_idf = "ut_noise_idf.txt"
         
         self.PerformAction()
     
@@ -59,24 +66,31 @@ class NoiseFilter:
 
             content = fd.readlines()
             unfiltered_terms = []
-            # filtered_terms is the array to be filled with filtered terms, noise_terms the garbage
-            filtered_terms = []
-            noise_terms = []
+            filtered_terms_regex = []
+            filtered_terms_idf = []
+            combined_filtered_terms = []
+            noise_terms_regex = []
+            noise_terms_idf = []
+            combined_noise_terms = []
 
-            # Cached regexes we plan on using.
+            # Create an instance of the indexer
+            indexer = Indexer()
+            # Index the tweets
+            indexer.LoadIndexes()
+
+            # Regexes to use as a filter
             ONLYNUM     = "^[0-9]*$"
             SPECIAL     = "[/_$&+,:;{}\"=?\[\]@#|~'<>^*()%!]"
             UPPER       = "[A-Z]"
             LOWER       = "[a-z]"
             PUNCT       = "[.?\-\",]"
             ALL_ALPHA   = "^[a-z]+$"
-            CONSONANT   = "(^y|[bcdfghjklmnpqrstvwxyz])"
+            CONSONANT   = "(^y|[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ])"
             VOWEL       = "([aAeEiIoOuU])"
             CONSONANT_5 = "[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ]{5}"
             VOWEL_5     = "[aAeEiIoOuU]{5}"
             REPEATED    = "(\b\S{1,2}\s+)(\S{1,3}\s+){5,}(\S{1,2}\s+)"
-            SINGLETONS  = "^[AaIi]$"
-        
+            
             for line in content:
                 
                 term = line.strip().split('\t')[0]
@@ -89,29 +103,66 @@ class NoiseFilter:
                 # 3. terms consisting only of numbers
                 # 4. terms having more punctuation than characters
                 # 5. Four or more consecutive vowels, or five or more consecutive consonants.
-                if (len(term) <3 or len(term) >= 10) \
+                if (len(term) <3 or len(term) >= 5) \
                 or (re.search(SPECIAL,term) != None) \
                 or (re.search(ONLYNUM,term) != None) \
                 or (len(re.findall(PUNCT,term)) > (len(term)-len(re.findall(PUNCT,term)))) \
                 or (re.search(VOWEL_5,term) != None) or (re.search(CONSONANT_5,term) != None) \
                 :
-                    noise_terms.append(term)
+                    noise_terms_regex.append(term)
                 
                 else: 
-                    filtered_terms.append(term)
+                    filtered_terms_regex.append(term)
             
+                # Get IDF term values. If > 0.0 it can be a valid UT, otherwise not
+                idf = indexer.GetIDFForTerm(term)
+                if idf > 0.0:
+                    filtered_terms_idf.append(term)
+                elif idf == 0.0:
+                    noise_terms_idf.append(term)
+
+            combined_filtered_terms = intersect(filtered_terms_regex,filtered_terms_idf)
+            combined_noise_terms = diff(unfiltered_terms,combined_filtered_terms)
+
             print 'Input Terms: ' + str(len(unfiltered_terms))
-            print 'Unidentified Terms: ' + str(len(filtered_terms))
-            print 'Noisy Terms: ' + str(len(noise_terms))
+            print 'Unidentified Terms Regex: ' + str(len(filtered_terms_regex))
+            print 'Noisy Terms Regex: ' + str(len(noise_terms_regex))
+            print 'Unidentified Terms IDF: ' + str(len(filtered_terms_idf))
+            print 'Noisy Terms IDF: ' + str(len(noise_terms_idf))
+            print 'Combined Unidentified Terms: ' + str(len(combined_filtered_terms))
+            print 'Combined Noisy Terms: ' + str(len(combined_noise_terms))
         
+            with open(self.output_filename_regex, 'w') as outputfile_regex:
+                for ut in filtered_terms_regex:
+                    outputfile_regex.write(ut + '\n')
+
+            with open(self.output_filename_noise_regex, 'w') as outputfile_noise_regex:
+                for nt in noise_terms_regex:
+                    outputfile_noise_regex.write(nt + '\n')
+
+            with open(self.output_filename_idf, 'w') as outputfile_idf:
+                for ut in filtered_terms_idf:
+                    outputfile_idf.write(ut + '\n')
+
+            with open(self.output_filename_noise_idf, 'w') as outputfile_noise_idf:
+                for nt in noise_terms_idf:
+                    outputfile_noise_idf.write(nt + '\n')
+
             with open(self.output_filename, 'w') as outputfile:
-                for ut in filtered_terms:
+                for ut in combined_filtered_terms:
                     outputfile.write(ut + '\n')
 
             with open(self.output_filename_noise, 'w') as outputfile_noise:
-                for nt in noise_terms:
+                for nt in combined_noise_terms:
                     outputfile_noise.write(nt + '\n')
-    
+
+def intersect(a, b):
+    return list(set(a) & set(b))
+
+def diff(a, b):
+    b = set(b)
+    return [aa for aa in a if aa not in b]
+
 def error(msg):
     sys.stderr.write("%s\n" % msg)
     sys.exit()
