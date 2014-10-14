@@ -25,68 +25,14 @@ class Indexer:
     The Indexer is responsible for indexing terms and tweets with all extra index-information provided
     """
     
-    def __init__(self, args):
+    def __init__(self):
         
-        self.args = args
-
-        # define indexer arguments/parameter input
-        self.ACTIONS = ('index','list','get','cluster')
-        self.GET_ACTIONS = ('term','tweet', 'idf')
-
-        # parse indexer action
-        if not args.action[0] in self.ACTIONS:
-            error("Action not recognized, try: %s" % ', '.join(self.ACTIONS))
-        self.ACTION = args.action[0]
-        
-        # parse action.get 
-        if self.ACTION == 'get':
-            if not len(args.action) > 2:
-                error("Expected extra parameter(s)")
-            if not args.action[1] in self.GET_ACTIONS:
-                error("Invallid parameter, try: %s" % ', '.join(self.GET_ACTIONS))
-            self.ACTION_GET = args.action[1]
-            self.ACTION_GET_VAL = args.action[2]
-        
-        elif self.ACTION == 'cluster':
-            if not len(args.action) > 1:
-                error("Expected extra parameter(s)")
-            self.ACTION_CLUSTER_VAL = args.action[1]
-
         # instance variables
         self.index_tf = {}
         self.index_idf = {}
         self.index_terms = {}
         self.index_matrix = {}
         self.index_tweets = {}        
-        
-        if not self.ACTION == "index":        
-            self.LoadIndexes()    
-
-        self.PerformAction()
-    
-    def PerformAction(self):
-            
-        if self.ACTION == 'index':
-            self.IndexFile(self.args.file)
-        
-        elif self.ACTION == 'get':
-
-            if self.ACTION_GET == 'term':
-                tweets = self.GetTweetsForTerm(self.ACTION_GET_VAL)
-                for tweet in tweets:
-                    print tweet
-
-            elif self.ACTION_GET == 'tweet':
-                print " ".join(self.GetTweetForTweetid(self.ACTION_GET_VAL))
-            
-            elif self.ACTION_GET == 'idf':
-                print self.GetIDFForTerm(self.ACTION_GET_VAL)
-
-        elif self.ACTION == 'list':
-            self.List()
-        
-        elif self.ACTION == 'cluster':
-            self.ClusterTerms(self.ACTION_CLUSTER_VAL)
 
     def StoreIndexes(self):
         
@@ -299,8 +245,57 @@ def main(arguments):
     if args.version:
         error("Indexer - Version: %d.%d.%d" % VERSION)
     
-    indexer = Indexer(args)
+    indexer = Indexer()
 
+    # define indexer arguments/parameter input
+    ACTIONS = ('index','list','get','cluster')
+    GET_ACTIONS = ('term','tweet', 'idf')
+
+    # 
+    # PARSE ARGUMENTS
+    #
+    if not args.action[0] in ACTIONS:
+        error("Action not recognized, try: %s" % ', '.join(ACTIONS))
+    ACTION = args.action[0]
+    
+    if ACTION == "index":        
+        indexer.IndexFile(args.file)
+    else: 
+        indexer.LoadIndexes()
+
+    if ACTION == 'get':
+        
+        if not len(args.action) > 2:
+            error("Expected extra parameter(s)")
+        
+        if not args.action[1] in GET_ACTIONS:
+            error("Invallid parameter, try: %s" % ', '.join(GET_ACTIONS))
+        
+        ACTION_GET = args.action[1]
+        ACTION_GET_VAL = args.action[2]
+        
+        if ACTION_GET == 'term':
+            tweets = indexer.GetTweetsForTerm(ACTION_GET_VAL)
+            for tweet in tweets:
+                print tweet
+
+        elif ACTION_GET == 'tweet':
+            print " ".join(indexer.GetTweetForTweetid(ACTION_GET_VAL))
+        
+        elif ACTION_GET == 'idf':
+            print indexer.GetIDFForTerm(ACTION_GET_VAL)
+    
+    elif ACTION == 'cluster':
+        
+        if not len(args.action) > 1:
+            error("Expected extra parameter(s)")
+        
+        ACTION_CLUSTER_VAL = args.action[1]
+        
+        indexer.ClusterTerms(ACTION_CLUSTER_VAL)
+    
+    elif ACTION == 'list':
+        indexer.List()
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
