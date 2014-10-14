@@ -9,4 +9,5 @@ http://git-scm.com/book/en/Getting-Started-First-Time-Git-Setup
 http://miktex.org/2.9/setup
 
 ### NLTK
-http://www.nltk.org/
+1. http://www.nltk.org/install.html
+2. Download NLTP packages
