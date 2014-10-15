@@ -82,8 +82,14 @@ class Indexer:
 
                 if len(data) >= 2:
                     
-                    tweetid = data[0]
-                    tweettext = self.Tokenize(data[1].lower())
+                    try:
+                        tweetid = data[0]
+                        tweetrt = int(data[1])
+                        tweetfav = int(data[2])
+                        tweetauthor = data[3]
+                        tweettext = self.Tokenize(data[4].lower())
+                    except:
+                        continue
                     
                     for t1 in tweettext:
                         
@@ -102,7 +108,7 @@ class Indexer:
                         self.IndexTermByTermFrequency(t1, tweettext)
 
                     # Construct a index that stores tweets by their tweetid               
-                    self.IndexTweet(tweetid, tweettext)
+                    self.IndexTweet(tweetid, tweettext, tweetrt, tweetfav, tweetauthor)
             
         self.StoreIndexes()
     
@@ -180,12 +186,6 @@ class Indexer:
             idf = math.log(doccount / ndt)
         
         return round(idf,2)
-
-    def GetTweetForTweetid(self, tweetid):
-
-        if tweetid in self.index_tweets.keys():
-            return self.index_tweets[tweetid]
-        return None
     
             
     def GetTermsByOccurrence(self):
@@ -223,9 +223,13 @@ class Indexer:
         for tterm in tweettext: 
             self.index_matrix[term][tterm] += 1
    
+    def IndexTweet(self, tweetid, tweettext, tweetrt, tweetfav, tweetauthor):
+        self.index_tweets[tweetid] = (tweettext, tweetrt, tweetfav, tweetauthor)
 
-    def IndexTweet(self, tweetid, tweet):
-        self.index_tweets[tweetid] = tweet
+    def GetTweetForTweetid(self, tweetid):
+        if tweetid in self.index_tweets.keys():
+            return self.index_tweets[tweetid]
+        return None
  
 def djson(data):
     print json.dumps(data, indent=4)
