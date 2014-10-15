@@ -8,7 +8,7 @@
 
 cat $1 \
     | awk -F',' '{ if(NF == 5) { print $0; } }' \
-    | sed 's///g' \
+    | tr -d '\r' \
     | sed 's/"//g' \
     | awk -F',' '{ print $1"   "$4"    "$5"    "$3"    "$2; }' \
     | grep -iP "^[0-9]+" \
