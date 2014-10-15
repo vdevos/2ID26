@@ -8,7 +8,9 @@ __author__ = 'Thom Hurks'
 import nltk
 from nltk.corpus import words
 from nltk.stem import snowball
+from nltk.corpus import stopwords
 from nltk.tag.stanford import *
+from nltk.stem.wordnet import WordNetLemmatizer
 
 # Write UT's to file:
 write_output = True
@@ -24,6 +26,7 @@ dictFileName = "wordsEn.txt"
 # There is also the Lancaster stemmer, but it is quite aggressive.
 # Another approach could be lemmatization using Wordnet.
 stemmer = snowball.EnglishStemmer()
+lemmatizer = WordNetLemmatizer()
 tweets = []
 tokens = set()
 normalized_tweets = []
@@ -66,29 +69,54 @@ if os.path.isfile(dictFileName):
         for word in lines:
             wordlist.add(word)
 
-# Remove all tokens that appear in the dictionary directly (lowercase)
-for token in tokens:
-    if token.lower() in wordlist:
-        unidentified_terms.remove(token)
+# Add stopwords to the wordlist as well, to make sure they are in there.
+wordlist.union(set(stopwords.words('english')))
 
-# To filter more words, we need to apply stemming.
+# To filter words, we need to apply stemming and lemmatization.
+# First we create and fill dictionaries with stemmed and lemmatized variants of words in the wordlist.
 stemmed_wordlist = dict()
+lemmatized_wordlist = dict()
 
 for word in wordlist:
     stemmedWord = stemmer.stem(word)
     stemmed_wordlist[stemmedWord] = word
+    lemmatizedWord = lemmatizer.lemmatize(word)
+    lemmatized_wordlist[lemmatizedWord] = word
 
-print("nr of unidentified terms before stemming: ", len(unidentified_terms))
-
+# Try to eliminate as much known words as possible.
 copy_of_uts = set(unidentified_terms)
 for token in copy_of_uts:
-    stemmedToken = stemmer.stem(token.lower())
-    result = stemmed_wordlist.get(stemmedToken, None)
-    if result is not None:
+    remove_token = False
+    # Discard single character words.
+    if len(token) <= 1:
+        remove_token = True
+    if not remove_token:
+        # Try to see if the word in plain, stemmed or lemmatized form is in the wordlist.
+        token_lower = token.lower()
+        stemmedToken = stemmer.stem(token_lower)
+        lemmatizedToken = lemmatizer.lemmatize(token_lower)
+        lemmatizedStemmedToken = lemmatizer.lemmatize(stemmedToken)
+        if token_lower in wordlist \
+                or stemmedToken in wordlist \
+                or lemmatizedToken in wordlist \
+                or lemmatizedStemmedToken in wordlist:
+            remove_token = True
+        if not remove_token:
+            # Try to match the stemmed and lemmatized words with stemmed and lemmatized worlist words.
+            stemLookup = stemmed_wordlist.get(stemmedToken, None)
+            lemmatizeLookup = lemmatized_wordlist.get(lemmatizedToken, None)
+            lemmatizeStemLookup = lemmatized_wordlist.get(lemmatizedStemmedToken, None)
+            if stemLookup is not None or lemmatizeLookup is not None or lemmatizeStemLookup is not None:
+                remove_token = True
+    # Remove the word if the token was matched at any point.
+    if remove_token:
         unidentified_terms.remove(token)
 del copy_of_uts
+del stemmed_wordlist
+del lemmatized_wordlist
 
 print("nr of words in wordlist: ", len(wordlist))
+print("nr of tweets: ", len(tweets))
 print("nr of extracted tokens: ", len(tokens))
 print("nr of unidentified terms: ", len(unidentified_terms))
 
