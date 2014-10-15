@@ -11,7 +11,7 @@ from nltk.stem import snowball
 from nltk.tag.stanford import *
 
 # Write UT's to file:
-write_output = False
+write_output = True
 output_filename = "ut_output.txt"
 # NER tagging is very slow! For now just prints to console.
 apply_NER_tagging = False
@@ -26,6 +26,7 @@ dictFileName = "wordsEn.txt"
 stemmer = snowball.EnglishStemmer()
 tweets = []
 tokens = set()
+normalized_tweets = []
 
 # First we read in all the tweets.
 if os.path.isfile(tweetsfilename):
@@ -33,22 +34,17 @@ if os.path.isfile(tweetsfilename):
         lines = tweetsfile.readlines()
         for line in lines:
             linedata = line.strip().split('\t')
-            if len(linedata) >= 2:
-                tweets.append(linedata[1])
+            if len(linedata) >= 6:
+                tweets.append(linedata[5])
 
 if apply_NER_tagging:
     # Apply the Stanford Named Entity Recognizer (NER) tagger.
-    nertagger = NERTagger('english.all.3class.distsim.crf.ser.gz', 'stanford-ner-3.4.1.jar')
-    # Tokenize the tweets with the NLTK default tokenizer and apply the tagger on the tweets.
+    nertagger = NERTagger('english.all.3class.distsim.crf.ser.gz', 'stanford-ner-3.4.1.jar', 'utf-8')
+    # Tokenize the tweets with the NLTK default tokenizer and apply the NER tagger on the tweets.
+    # Todo: store and cache the tagging output with pickle or something.
     for tweet in tweets:
         tweet_tokens = nltk.word_tokenize(tweet)
-        tweet_tokens_ascii = []
-        for token in tweet_tokens:
-            # There is probably a better way to convert the tokens to ascii ;)
-            ascii_token = token.encode('ascii', 'ignore').decode('ascii', 'ignore')
-            if len(ascii_token) >= 1:
-                tweet_tokens_ascii.append(ascii_token)
-        tagged_tweet = nertagger.tag(tweet_tokens_ascii)
+        tagged_tweet = nertagger.tag(tweet_tokens)
         print(tagged_tweet)
 
 # Tokenize the tweets with the NLTK default tokenizer.
