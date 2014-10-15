@@ -80,16 +80,14 @@ class Indexer:
 
                 data = line.strip().split('\t')
 
-                if len(data) >= 2:
+                if len(data) >= 6:
                     
-                    try:
-                        tweetid = data[0]
-                        tweetrt = int(data[1])
-                        tweetfav = int(data[2])
-                        tweetauthor = data[3]
-                        tweettext = self.Tokenize(data[4].lower())
-                    except:
-                        continue
+                    tweetid = data[0]
+                    tweetrt = int(data[1])
+                    tweetfav = int(data[2])
+                    tweetaf = int(data[3]) 
+                    tweetauthor = data[4]
+                    tweettext = self.Tokenize(data[5].lower())
                     
                     for t1 in tweettext:
                         
@@ -108,7 +106,7 @@ class Indexer:
                         self.IndexTermByTermFrequency(t1, tweettext)
 
                     # Construct a index that stores tweets by their tweetid               
-                    self.IndexTweet(tweetid, tweettext, tweetrt, tweetfav, tweetauthor)
+                    self.IndexTweet(tweetid, tweettext, tweetrt, tweetfav, tweetaf, tweetauthor)
             
         self.StoreIndexes()
     
@@ -187,6 +185,20 @@ class Indexer:
         
         return round(idf,2)
     
+    def GetTFIDFForTerm(self, term, tweetid):
+        
+        tf = 0
+        document = self.GetTweetForTweetid(tweetid, tokenized=True)
+        if document:
+            for t in document:
+                print t
+                if t == term:
+                    tf += 1
+
+        idf = self.GetIDFForTerm(term)
+        
+        return tf * idf
+    
             
     def GetTermsByOccurrence(self):
                 
@@ -223,12 +235,15 @@ class Indexer:
         for tterm in tweettext: 
             self.index_matrix[term][tterm] += 1
    
-    def IndexTweet(self, tweetid, tweettext, tweetrt, tweetfav, tweetauthor):
-        self.index_tweets[tweetid] = (tweettext, tweetrt, tweetfav, tweetauthor)
+    def IndexTweet(self, tweetid, tweettext, tweetrt, tweetfav, tweetaf, tweetauthor):
+        self.index_tweets[tweetid] = (tweettext, tweetrt, tweetfav, tweetaf, tweetauthor)
 
-    def GetTweetForTweetid(self, tweetid):
+    def GetTweetForTweetid(self, tweetid, tokenized=False):
         if tweetid in self.index_tweets.keys():
-            return self.index_tweets[tweetid]
+            if tokenized:
+                return self.index_tweets[tweetid][0]
+            else:
+                return ' '.join(self.index_tweets[tweetid][0])
         return None
  
 def djson(data):
@@ -240,8 +255,12 @@ def error(msg):
 
 def main(arguments):
     
+    # define indexer arguments/parameter input
+    ACTIONS = ('index','list','get','cluster')
+    GET_ACTIONS = ('term','tweet', 'idf','tfidf')
+
     parser = argparse.ArgumentParser(prog="Indexer", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("action", metavar='action', type=str, nargs='+', help='Action for the indexer: index, search')
+    parser.add_argument("action", metavar='action', type=str, nargs='+', help='Actions for the indexer: %s' % ', '.join(ACTIONS))
     parser.add_argument("--file", metavar='file', type=str, help='Input file used for indexing actions')
     parser.add_argument("--version", action='store_true', default=False, help="current version")
     args = parser.parse_args(arguments)
@@ -250,10 +269,6 @@ def main(arguments):
         error("Indexer - Version: %d.%d.%d" % VERSION)
     
     indexer = Indexer()
-
-    # define indexer arguments/parameter input
-    ACTIONS = ('index','list','get','cluster')
-    GET_ACTIONS = ('term','tweet', 'idf')
 
     # 
     # PARSE ARGUMENTS
@@ -284,10 +299,15 @@ def main(arguments):
                 print tweet
 
         elif ACTION_GET == 'tweet':
-            print " ".join(indexer.GetTweetForTweetid(ACTION_GET_VAL))
+            print indexer.GetTweetForTweetid(ACTION_GET_VAL)
         
         elif ACTION_GET == 'idf':
             print indexer.GetIDFForTerm(ACTION_GET_VAL)
+        
+        elif ACTION_GET == 'tfidf':
+            if not len(args.action) > 3:
+                error("Expected extra parameter: tweetid")
+            print indexer.GetTFIDFForTerm(ACTION_GET_VAL, args.action[3])
     
     elif ACTION == 'cluster':
         
