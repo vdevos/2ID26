@@ -14,11 +14,13 @@ from nltk.stem.wordnet import WordNetLemmatizer
 
 # Write UT's to file:
 write_output = True
+write_normalized_tweets = True
 output_filename = "ut_output.txt"
 # NER tagging is very slow! For now just prints to console.
 apply_NER_tagging = False
 # Input file:
 tweetsfilename = "tweets.txt"
+output_normalizedtweets_filename = "normalized_tweets.txt"
 # English word list file name:
 dictFileName = "wordsEn.txt"
 
@@ -50,11 +52,20 @@ if apply_NER_tagging:
         tagged_tweet = nertagger.tag(tweet_tokens)
         print(tagged_tweet)
 
+normalized_tweets = []
+
 # Tokenize the tweets with the NLTK default tokenizer.
 for tweet in tweets:
     tweet_tokens = nltk.word_tokenize(tweet)
+    normalized_tweet = []
     for token in tweet_tokens:
         tokens.add(token)
+        if len(token) > 1:
+            stemmed_token = stemmer.stem(token.lower())
+            if len(stemmed_token) > 1:
+                normalized_tweet.append(stemmed_token)
+    if len(normalized_tweet) > 0:
+        normalized_tweets.append(normalized_tweet)
 
 # Make a copy of the tokens, we will use this set to remove identified tokens from
 unidentified_terms = set(tokens)
@@ -125,5 +136,15 @@ if write_output:
     with open(output_filename, 'x') as outputfile:
         for ut in unidentified_terms:
             outputfile.write(ut + '\n')
+
+if write_normalized_tweets:
+    space = str(' ')
+    # The 'w' means open for exclusive creation, failing if the file already exists.
+    with open(output_normalizedtweets_filename, 'x') as outputfile:
+        for tweet in normalized_tweets:
+            line = str()
+            for token in tweet:
+                line += token + space
+            outputfile.write(line + '\n')
 
 exit()
