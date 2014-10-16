@@ -59,7 +59,7 @@ if os.path.isfile(dictFileName):
     with open(dictFileName) as dictFile:
         lines = dictFile.readlines()
         for word in lines:
-            wordlist.add(word)
+            wordlist.add(word.strip())
 
 # Add stopwords to the wordlist as well, to make sure they are in there.
 wordlist.union(set(stopwords.words('english')))
