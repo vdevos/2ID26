@@ -1,19 +1,18 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 # Roy Haanen - 12/10/2014 
 #
 # CHANGELOG
-# 0.0.1     Setup initial filter_noise class
+# 0.0.1     Setup initial NoiseFilter class
+# 0.0.2     Added IDF
 
 VERSION = (0,0,2)
  
 import os
 import re
 import sys
-import json
 import math
-import pickle
-import operator
 import argparse
 
 sys.path.insert(0,"../indexer")
@@ -81,15 +80,12 @@ class NoiseFilter:
             # Regexes to use as a filter
             ONLYNUM     = "^[0-9]*$"
             SPECIAL     = "[/_$&+,:;{}\"=?\[\]@#|~'<>^*()%!]"
-            UPPER       = "[A-Z]"
-            LOWER       = "[a-z]"
+            NON_ASCII   = "[^\x00-\x7F]"
             PUNCT       = "[.?\-\",]"
-            ALL_ALPHA   = "^[a-z]+$"
             CONSONANT   = "(^y|[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ])"
             VOWEL       = "([aAeEiIoOuU])"
-            CONSONANT_5 = "[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ]{5}"
-            VOWEL_5     = "[aAeEiIoOuU]{5}"
-            REPEATED    = "(\b\S{1,2}\s+)(\S{1,3}\s+){5,}(\S{1,2}\s+)"
+            CONSONANT_4 = "[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ]{4}"
+            VOWEL_4     = "[aAeEiIoOuU]{4}"
             
             for line in content:
                 
@@ -99,26 +95,34 @@ class NoiseFilter:
                 
                 # Applied filters:
                 # 1. terms of 1 or 2 characters or terms larger than 10 characters
-                # 2. terms containing special characters
-                # 3. terms consisting only of numbers
-                # 4. terms having more punctuation than characters
-                # 5. Four or more consecutive vowels, or five or more consecutive consonants.
-                if (len(term) <3 or len(term) >= 5) \
+                # 2. terms containing non-ascii characters
+                # 3. terms containing special characters
+                # 4. terms consisting only of numbers
+                # 5. terms having more punctuation than characters
+                # 6. Four or more consecutive vowels, or five or more consecutive consonants.
+                
+                if (len(term) <3 or len(term) >= 7) \
+                or (re.search(NON_ASCII,term) != None) \
                 or (re.search(SPECIAL,term) != None) \
                 or (re.search(ONLYNUM,term) != None) \
                 or (len(re.findall(PUNCT,term)) > (len(term)-len(re.findall(PUNCT,term)))) \
-                or (re.search(VOWEL_5,term) != None) or (re.search(CONSONANT_5,term) != None) \
+                or (re.search(VOWEL_4,term) != None) or (re.search(CONSONANT_4,term) != None) \
                 :
                     noise_terms_regex.append(term)
                 
                 else: 
                     filtered_terms_regex.append(term)
             
-                # Get IDF term values. If > 0.0 it can be a valid UT, otherwise not
+                # Get IDF term values. idf_base is the idf factor for terms that only appear once in the whole collection.
+                # Values lower than the idf_base can be a valid UTs, otherwise not
                 idf = indexer.GetIDFForTerm(term)
-                if idf > 0.0:
+                doccount = float(len(indexer.index_tweets.keys()))
+                idf_base = math.log(doccount)
+                threshold_idf = self.args.idf_factor*idf_base
+                
+                if idf <= threshold_idf:
                     filtered_terms_idf.append(term)
-                elif idf == 0.0:
+                else:
                     noise_terms_idf.append(term)
 
             combined_filtered_terms = intersect(filtered_terms_regex,filtered_terms_idf)
@@ -172,6 +176,7 @@ def main(arguments):
     parser = argparse.ArgumentParser(prog="NoiseFilter", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("action", metavar='action', type=str, nargs='+', help='Action for NoiseFilter: filter')
     parser.add_argument("--file", metavar='file', type=str, help='Input file used for filtering actions')
+    parser.add_argument("--idf_factor", metavar='idf_factor', type=float, help='Multiply base idf with factor 0.0..1.0')
     parser.add_argument("--version", action='store_true', default=False, help="current version")
     args = parser.parse_args(arguments)
     
