@@ -11,6 +11,8 @@ from nltk.corpus import stopwords
 from nltk.tag.stanford import *
 from nltk.stem.wordnet import WordNetLemmatizer
 
+# Normalize output:
+output_normalized = True
 output_filename = "ut_output"
 output_extension = ".txt"
 # Input file:
@@ -44,7 +46,7 @@ for tweet in tweets:
             stemmed_token = stemmer.stem(token.lower())
             if len(stemmed_token) > 1:
                 tokens.add(token)
-                normalized_tokens[stemmed_token] = token
+                normalized_tokens[token] = stemmed_token
 
 # Make a copy of the tokens, we will use this set to remove identified tokens from
 unidentified_terms = set(tokens)
@@ -101,6 +103,7 @@ for token in copy_of_uts:
     # Remove the word if the token was matched at any point.
     if remove_token:
         unidentified_terms.remove(token)
+        normalized_tokens.pop(token)
 del copy_of_uts
 del stemmed_wordlist
 del lemmatized_wordlist
@@ -108,7 +111,6 @@ del lemmatized_wordlist
 print("nr of words in wordlist: ", len(wordlist))
 print("nr of tweets: ", len(tweets))
 print("nr of extracted tokens: ", len(tokens))
-print("nr of unidentified terms: ", len(unidentified_terms))
 
 written = False
 counter = 0
@@ -116,8 +118,17 @@ while not written:
     try:
         # The 'w' means open for exclusive creation, failing if the file already exists.
         with open(output_filename + str(counter) + output_extension, 'x') as outputfile:
-            for ut in unidentified_terms:
-                outputfile.write(ut + '\n')
+            if not output_normalized:
+                for ut in unidentified_terms:
+                    outputfile.write(ut + '\n')
+                print("nr of unidentified terms: ", len(unidentified_terms))
+            else:
+                normalized_uds = set(normalized_tokens.values())
+                ud_list = list(normalized_uds)
+                ud_list.sort()
+                for ut in ud_list:
+                    outputfile.write(ut + '\n')
+                print("nr of normalized unidentified terms: ", len(ud_list))
             written = True
     except FileExistsError:
         counter += 1
