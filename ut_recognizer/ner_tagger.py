@@ -1,5 +1,7 @@
 __author__ = 'thom'
 
+# For the NER tagger you need a classifier and the Stanford NER jar file. Together they are 28 MB.
+# Tested only with Python3.4 and Stanford NER tagger 3.4.1
 import nltk
 from nltk.stem import snowball
 from nltk.tag.stanford import *
