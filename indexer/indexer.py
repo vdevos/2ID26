@@ -191,7 +191,6 @@ class Indexer:
         document = self.GetTweetForTweetid(tweetid, tokenized=True)
         if document:
             for t in document:
-                print t
                 if t == term:
                     tf += 1
 
