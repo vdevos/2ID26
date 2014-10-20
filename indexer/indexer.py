@@ -193,7 +193,10 @@ class Indexer:
         document = self.GetTweetForTweetid(tweetid, tokenized=True)
         if document:
             for t in document:
+<<<<<<< HEAD
                 print(t)
+=======
+>>>>>>> FETCH_HEAD
                 if t == term:
                     tf += 1
 
