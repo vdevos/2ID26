@@ -1,9 +1,11 @@
 __author__ = 'thom'
 
+import sys
+sys.path.insert(0,"../ut_noisefilter")
 import nltk
 import os
 from nltk.stem import snowball
-
+from noisefilter import NoiseFilter
 
 # Input file:
 input_tweets_filename = "tweets.txt"
@@ -46,6 +48,11 @@ for tweet in tweets:
     normalized_tweets.append(normalized_tweet)
 
 assert len(old_tweets) == len(normalized_tweets)
+
+# This should output "test".
+noise_filter = NoiseFilter(None)
+filtered_words = noise_filter.FilterNoise({"test", "blablablablabla"}, 0.8)
+print(str(filtered_words))
 
 space = str(' ')
 tab = str('\t')
