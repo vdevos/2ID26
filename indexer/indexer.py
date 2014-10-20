@@ -43,17 +43,37 @@ class Indexer:
         pickle.Pickler(open("index_tweets.index", "wb"), protocol=2).dump(self.index_tweets)
 
     def LoadIndexes(self):
-
+        py3 = sys.version[:2] == "3."
         # try to load stored indexes from disk
         # add this to the ctor make it work with Python 3: fix_imports=True, encoding="UTF-8"
         if os.path.isfile('index_tf.index'):
-            self.index_tf = pickle.Unpickler(open("index_tf.index", "rb")).load()
+            if py3:
+                unpickler = pickle.Unpickler(open("index_tf.index", "rb"),
+                                             fix_imports=True, encoding="UTF-8")
+            else:
+                unpickler = pickle.Unpickler(open("index_tf.index", "rb"))
+            self.index_tf = unpickler.load()
         if os.path.isfile('index_matrix.index'):
-            self.index_matrix = pickle.Unpickler(open("index_matrix.index", "rb")).load()
+            if py3:
+                unpickler = pickle.Unpickler(open("index_matrix.index", "rb"),
+                                             fix_imports=True, encoding="UTF-8")
+            else:
+                unpickler = pickle.Unpickler(open("index_matrix.index", "rb"))
+            self.index_matrix = unpickler.load()
         if os.path.isfile('index_terms.index'):
-            self.index_terms = pickle.Unpickler(open("index_terms.index", "rb")).load()
+            if py3:
+                unpickler = pickle.Unpickler(open("index_terms.index", "rb"),
+                                             fix_imports=True, encoding="UTF-8")
+            else:
+                unpickler = pickle.Unpickler(open("index_terms.index", "rb"))
+            self.index_terms = unpickler.load()
         if os.path.isfile('index_tweets.index'):
-            self.index_tweets = pickle.Unpickler(open("index_tweets.index", "rb")).load()
+            if py3:
+                unpickler = pickle.Unpickler(open("index_tweets.index", "rb"),
+                                             fix_imports=True, encoding="UTF-8")
+            else:
+                unpickler = pickle.Unpickler(open("index_tweets.index", "rb"))
+            self.index_tweets = unpickler.load()
 
     def Tokenize(self, text):
         words = []
