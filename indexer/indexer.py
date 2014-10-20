@@ -4,20 +4,26 @@
 #
 # CHANGELOG
 # 0.0.1     Setup initial indexer class
+#
+#
+# 1.1.0
 
-VERSION = (0,0,1)
+VERSION = (1,1,0)
  
 import os
 import re
 import sys
 import json
 import math
+import time
 import pickle
 import operator
 import argparse
 
+from apriori import TermCount, FilterTerms, GenerateTerms, MutateTerms 
+
 # http://www.nltk.org/api/nltk.tokenize.html#nltk.tokenize.punkt.PunktWordTokenizer
-from nltk.corpus import stopwords
+# from nltk.corpus import stopwords
 
 class Indexer:
 
@@ -29,7 +35,6 @@ class Indexer:
         
         # instance variables
         self.index_tf = {}
-        self.index_idf = {}
         self.index_terms = {}
         self.index_matrix = {}
         self.index_tweets = {}        
@@ -38,7 +43,6 @@ class Indexer:
         
         # for every index we keep, we write a pickled file to disk
         pickle.dump(self.index_tf, open("index_tf.index", "wb"))
-        pickle.dump(self.index_idf, open("index_idf.index", "wb"))
         pickle.dump(self.index_matrix, open("index_matrix.index", "wb"))
         pickle.dump(self.index_terms, open("index_terms.index", "wb"))
         pickle.dump(self.index_tweets, open("index_tweets.index", "wb"))
@@ -46,8 +50,6 @@ class Indexer:
     def LoadIndexes(self):
         
         # try to load stored indexes from disk
-        if os.path.isfile('index_idf.index'):
-            self.index_idf = pickle.load(open("index_idf.index", "rb"))
         if os.path.isfile('index_tf.index'):
             self.index_tf = pickle.load(open("index_tf.index", "rb"))
         if os.path.isfile('index_matrix.index'):
@@ -60,7 +62,7 @@ class Indexer:
     def Tokenize(self, text):
         words = []
         for term in re.split('[,\s]', text):
-            if len(term) > 1 and not term.decode('utf-8') in stopwords.words('english'):
+            if len(term) > 1: # and not term.decode('utf-8') in stopwords.words('english'):
                 words.append(term)
         return words
 
@@ -129,6 +131,53 @@ class Indexer:
         #for tweetid, tweettext in self.index_tweets.iteritems():
         #    print "%s   %s" % (tweetid, tweettext)
     
+    def AprioriTerms(self, term):
+            
+        min_support = 0.15
+        min_confidence = 0.1
+       
+        collection = []
+
+        for tweetid in self.GetTweetsForTerm(term):
+            tweet = self.index_tweets[tweetid][0]
+            collection.append(tweet)
+        
+        C = TermCount(collection)
+        F = FilterTerms(C, min_support, len(collection) + 1)
+        
+        C = GenerateTerms(F.keys())
+        C = MutateTerms(C, collection)
+        F = FilterTerms(C, min_support, len(collection) + 1)
+        
+        results = []
+
+        F = sorted(F.items(), key=operator.itemgetter(1), reverse=True)
+        for pair in F[0:5]:
+            if not term == pair[0][0]:
+                if not pair[0][0] in results:
+                    results.append(pair[0][0])
+            if not term == pair[0][1]:
+                if not pair[0][1] in results:
+                    results.append(pair[0][1])
+
+        return results
+        
+        """
+        while len(F) == 0 or len(F) > 3:
+            
+            print "KEYS1: ", F.keys()
+            C = candidate_gen(F.keys())
+            C = add_frequency(C, collection)
+            F = find_frequent(C, min_support, len(collection) + 1)
+            
+            print "KEYS2: ", F.keys()
+            FR = sorted(F.items(), key=operator.itemgetter(1), reverse=True)
+            for pair in FR[0:3]:
+                print pair
+            
+            time.sleep(5)
+        """
+
     def ClusterTerms(self, term=None):
         
         # Using Euclidean distance (http://en.wikipedia.org/wiki/Euclidean_distance) for simple 'clustering' 
@@ -170,10 +219,10 @@ class Indexer:
             else:
                 return self.index_terms[term]
         return []
-    
+     
     def GetIDFForTerm(self, term):
         
-        # Calculate TF*IDF for a term
+        # Calculate IDF for a term
         # http://en.wikipedia.org/wiki/Tf-idf
 
         idf = 0.00
@@ -186,6 +235,9 @@ class Indexer:
         return round(idf,2)
     
     def GetTFIDFForTerm(self, term, tweetid):
+        
+        # Calculate TF*IDF for a term
+        # http://en.wikipedia.org/wiki/Tf-idf
         
         tf = 0
         document = self.GetTweetForTweetid(tweetid, tokenized=True)
@@ -255,7 +307,7 @@ def error(msg):
 def main(arguments):
     
     # define indexer arguments/parameter input
-    ACTIONS = ('index','list','get','cluster')
+    ACTIONS = ('index','list','get','cluster','apriori')
     GET_ACTIONS = ('term','tweet', 'idf','tfidf')
 
     parser = argparse.ArgumentParser(prog="Indexer", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -308,14 +360,22 @@ def main(arguments):
                 error("Expected extra parameter: tweetid")
             print indexer.GetTFIDFForTerm(ACTION_GET_VAL, args.action[3])
     
+    elif ACTION == 'apriori':
+        
+        if not len(args.action) > 1:
+            error("Expected extra parameter(s)")
+        ACTION_VAL = args.action[1]
+
+        print ", ".join(indexer.AprioriTerms(ACTION_VAL))
+
     elif ACTION == 'cluster':
         
         if not len(args.action) > 1:
             error("Expected extra parameter(s)")
         
-        ACTION_CLUSTER_VAL = args.action[1]
+        ACTION_VAL = args.action[1]
         
-        indexer.ClusterTerms(ACTION_CLUSTER_VAL)
+        indexer.ClusterTerms(ACTION_VAL)
     
     elif ACTION == 'list':
         indexer.List()
