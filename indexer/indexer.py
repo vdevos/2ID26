@@ -22,10 +22,6 @@ import argparse
 from apriori import TermCount, FilterTerms, GenerateTerms, MutateTerms
 
 
-# http://www.nltk.org/api/nltk.tokenize.html#nltk.tokenize.punkt.PunktWordTokenizer
-# from nltk.corpus import stopwords
-
-
 class Indexer:
     """
     The Indexer is responsible for indexing terms and tweets with all extra index-information provided
@@ -41,20 +37,10 @@ class Indexer:
 
     def StoreIndexes(self):
         # for every index we keep, we write a pickled file to disk
-
-        # De Python 2 manier van Picklen:
-        #pickle.dump(self.index_tf, open("index_tf.index", "wb"))
-        #pickle.dump(self.index_matrix, open("index_matrix.index", "wb"))
-        #pickle.dump(self.index_terms, open("index_terms.index", "wb"))
-        #pickle.dump(self.index_tweets, open("index_tweets.index", "wb"))
-        
-        # TODO: Kijken of dit werkt op Python 2 en 3
         pickle.Pickler(open("index_tf.index", "wb"), protocol=2).dump(self.index_tf)
         pickle.Pickler(open("index_matrix.index", "wb"), protocol=2).dump(self.index_matrix)
         pickle.Pickler(open("index_terms.index", "wb"), protocol=2).dump(self.index_terms)
         pickle.Pickler(open("index_tweets.index", "wb"), protocol=2).dump(self.index_tweets)
-        # Deze file is niet meer nodig denk ik:
-        #pickle.Pickler(open("index_idf.index", "wb"), protocol=2).dump(self.index_idf)
 
     def LoadIndexes(self):
 
@@ -145,7 +131,6 @@ class Indexer:
     def AprioriTerms(self, term):
             
         min_support = 0.15
-        min_confidence = 0.1
        
         collection = []
 
