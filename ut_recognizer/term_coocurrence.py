@@ -7,7 +7,7 @@ from nltk.corpus import stopwords
 output_filename = "term_cooccurrence_output"
 output_extension = ".txt"
 # Input files:
-input_tweets_filename = "normalized_tweets.txt"
+input_tweets_filename = "normalized_filtered_tweets.txt"
 tweet_text_column_index = 5
 input_unidentified_terms_filename = "ut_output.txt"
 
@@ -16,7 +16,7 @@ tweets = []
 unidentified_terms = set()
 # The minimum number of times a words should co-occur with a UT before we record it.
 minimal_nr_occurrences = 60
-# The maximum nr of co-occuring words that we record per UT.
+# The maximum nr of co-occurring words that we record per UT.
 max_words = 5
 
 # First we read in all the tweets.
@@ -30,8 +30,8 @@ if os.path.isfile(input_tweets_filename):
                 tweet_text = tweet_text - stopwords_set
                 tweets.append(tweet_text)
             else:
+                print(str(linedata))
                 print("Invalid file format!")
-                exit()
 
 print("Nr of tweets read in: ", len(tweets))
 

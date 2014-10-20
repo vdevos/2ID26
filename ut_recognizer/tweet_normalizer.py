@@ -7,11 +7,16 @@ import os
 from nltk.stem import snowball
 from noisefilter import NoiseFilter
 
+# WARNING: ALSO FILTERS THE TWEET TEXT!
+# DO NOT USE WHEN YOU NEED ALL TWEET WORDS!
+
 # Input file:
 input_tweets_filename = "tweets.txt"
-output_filename = "normalized_tweets"
+output_filename = "normalized_filtered_tweets"
 output_extension = ".txt"
 tweet_text_column_index = 5
+# IDF factor used for filtering:
+idf_factor = 0.8
 
 # The Snowball stemmer is basically "Porter v2".
 # There is also the Lancaster stemmer, but it is quite aggressive.
@@ -40,19 +45,21 @@ assert len(old_tweets) == len(tweets)
 for tweet in tweets:
     tweet_tokens = nltk.word_tokenize(tweet)
     normalized_tweet = []
+    # First apply stemming:
     for token in tweet_tokens:
         if len(token) > 1:
             stemmed_token = stemmer.stem(token.lower())
             if len(stemmed_token) > 1:
                 normalized_tweet.append(stemmed_token)
-    normalized_tweets.append(normalized_tweet)
+    # Now filter noise:
+    noise_filter = NoiseFilter(None)
+    filtered_words = noise_filter.FilterNoise(normalized_tweet, idf_factor)
+    if len(filtered_words) == 0:
+        # To prevent missing column in output.
+        filtered_words.append("null")
+    normalized_tweets.append(filtered_words)
 
 assert len(old_tweets) == len(normalized_tweets)
-
-# This should output "test".
-noise_filter = NoiseFilter(None)
-filtered_words = noise_filter.FilterNoise({"test", "blablablablabla"}, 0.8)
-print(str(filtered_words))
 
 space = str(' ')
 tab = str('\t')
