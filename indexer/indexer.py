@@ -8,19 +8,19 @@
 #
 # 1.1.0
 
-VERSION = (1,1,0)
- 
+VERSION = (1, 1, 0)
+
 import os
 import re
 import sys
 import json
 import math
-import time
 import pickle
 import operator
 import argparse
 
-from apriori import TermCount, FilterTerms, GenerateTerms, MutateTerms 
+from apriori import TermCount, FilterTerms, GenerateTerms, MutateTerms
+
 
 # http://www.nltk.org/api/nltk.tokenize.html#nltk.tokenize.punkt.PunktWordTokenizer
 # from nltk.corpus import stopwords
@@ -41,21 +41,25 @@ class Indexer:
 
     def StoreIndexes(self):
         # for every index we keep, we write a pickled file to disk
-        pickle.dump(self.index_tf, open("index_tf.index", "wb"))
-        pickle.dump(self.index_matrix, open("index_matrix.index", "wb"))
-        pickle.dump(self.index_terms, open("index_terms.index", "wb"))
-        pickle.dump(self.index_tweets, open("index_tweets.index", "wb"))
+
+        # De Python 2 manier van Picklen:
+        #pickle.dump(self.index_tf, open("index_tf.index", "wb"))
+        #pickle.dump(self.index_matrix, open("index_matrix.index", "wb"))
+        #pickle.dump(self.index_terms, open("index_terms.index", "wb"))
+        #pickle.dump(self.index_tweets, open("index_tweets.index", "wb"))
         
-        # TODO even naar kijken Thom
-        #pickle.Pickler(open("index_tf.index", "wb"), protocol=2).dump(self.index_tf)
+        # TODO: Kijken of dit werkt op Python 2 en 3
+        pickle.Pickler(open("index_tf.index", "wb"), protocol=2).dump(self.index_tf)
+        pickle.Pickler(open("index_matrix.index", "wb"), protocol=2).dump(self.index_matrix)
+        pickle.Pickler(open("index_terms.index", "wb"), protocol=2).dump(self.index_terms)
+        pickle.Pickler(open("index_tweets.index", "wb"), protocol=2).dump(self.index_tweets)
+        # Deze file is niet meer nodig denk ik:
         #pickle.Pickler(open("index_idf.index", "wb"), protocol=2).dump(self.index_idf)
-        #pickle.Pickler(open("index_matrix.index", "wb"), protocol=2).dump(self.index_matrix)
-        #pickle.Pickler(open("index_terms.index", "wb"), protocol=2).dump(self.index_terms)
-        #pickle.Pickler(open("index_tweets.index", "wb"), protocol=2).dump(self.index_tweets)
 
     def LoadIndexes(self):
 
         # try to load stored indexes from disk
+        # add this to the ctor make it work with Python 3: fix_imports=True, encoding="UTF-8"
         if os.path.isfile('index_tf.index'):
             self.index_tf = pickle.Unpickler(open("index_tf.index", "rb")).load()
         if os.path.isfile('index_matrix.index'):
@@ -132,7 +136,7 @@ class Indexer:
             print("%s  %s" % (term[1], term[0]))
             terms = self.GetTermsForTerm(term[0])
             for cterm in terms[0:5]:
-                print "  %s (%s)"  % (cterm[0], cterm[1])
+                print("  %s (%s)" % (cterm[0], cterm[1]))
                 
         # print indexed data
         #for tweetid, tweettext in self.index_tweets.iteritems():
@@ -371,7 +375,7 @@ def main(arguments):
         elif ACTION_GET == 'tfidf':
             if not len(args.action) > 3:
                 error("Expected extra parameter: tweetid")
-            print indexer.GetTFIDFForTerm(ACTION_GET_VAL, args.action[3])
+            print(indexer.GetTFIDFForTerm(ACTION_GET_VAL, args.action[3]))
     
     elif ACTION == 'apriori':
         
@@ -379,7 +383,7 @@ def main(arguments):
             error("Expected extra parameter(s)")
         ACTION_VAL = args.action[1]
 
-        print ", ".join(indexer.AprioriTerms(ACTION_VAL))
+        print(", ".join(indexer.AprioriTerms(ACTION_VAL)))
 
     elif ACTION == 'cluster':
 
