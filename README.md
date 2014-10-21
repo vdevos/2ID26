@@ -1,14 +1,16 @@
 #2ID26
 
 ### Members
-V.J.H. de Vos (@vdevos), Roy Haanen, Thom Hurks
+V.J.H. de Vos (@vdevos)
+R.A.C. Haanen
+T. Hurks
 
 ### Demo instructions 
 Run `pipeline.sh` in the root directory
 
 ### Packages
 
-NLTK
+Natural Language Tool Kit (NLTK)
 
 1. http://www.nltk.org/install.html
 2. Download NLTP packages
