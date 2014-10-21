@@ -2,7 +2,9 @@
 
 ### Members
 V.J.H. de Vos (@vdevos)
+
 R.A.C. Haanen
+
 T. Hurks
 
 ### Demo instructions 
