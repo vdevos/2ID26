@@ -21,7 +21,6 @@ import argparse
 
 from apriori import TermCount, FilterTerms, GenerateTerms, MutateTerms
 
-
 class Indexer:
     """
     The Indexer is responsible for indexing terms and tweets with all extra index-information provided
@@ -33,7 +32,7 @@ class Indexer:
         self.index_tf = {}
         self.index_terms = {}
         self.index_matrix = {}
-        self.index_tweets = {}
+        self.index_tweets = {}    
 
     def StoreIndexes(self):
         # for every index we keep, we write a pickled file to disk
@@ -76,6 +75,7 @@ class Indexer:
             self.index_tweets = unpickler.load()
 
     def Tokenize(self, text):
+
         words = []
         for term in re.split('[,\s]', text):
             if len(term) > 1: # and not term.decode('utf-8') in stopwords.words('english'):
@@ -131,18 +131,20 @@ class Indexer:
 
     def List(self):
 
-        print("\nExample: show top 5 indexed terms sorted by occurrence (descending) and the tweets(id) they occur in")
+        #print("\nExample: show top 5 indexed terms sorted by occurrence (descending) and the tweets(id) they occur in")
         termsbyoccurrence = self.GetTermsByOccurrence()
-        for term in termsbyoccurrence[0:5]:
-            print("%s  %s" % (term[1], term[0]))
-            self.GetTweetsForTerm(term[0], withFrequency=True)
+        #for term in termsbyoccurrence[0:5]:
+        #    print("%s  %s" % (term[1], term[0]))
+        #    self.GetTweetsForTerm(term[0], withFrequency=True)
 
         print("\nExample: for the top 5 indexed terms show a top 5 of words that often occurred together")
         for term in termsbyoccurrence[0:5]:
-            print("%s  %s" % (term[1], term[0]))
+            out = "%s  %s" % (term[1], term[0])
             terms = self.GetTermsForTerm(term[0])
+            subout = []
             for cterm in terms[0:5]:
-                print("  %s (%s)" % (cterm[0], cterm[1]))
+                subout.append("%s (%s)" % (cterm[0], cterm[1]))
+            print "%s:\t%s" % (out, ",\t".join(subout))
                 
         # print indexed data
         #for tweetid, tweettext in self.index_tweets.iteritems():
@@ -239,7 +241,7 @@ class Indexer:
         return []
 
     def GetIDFForTerm(self, term):
-
+        
         # Calculate IDF for a term
         # http://en.wikipedia.org/wiki/Tf-idf
 
@@ -400,7 +402,6 @@ def main(arguments):
 
     elif ACTION == 'list':
         indexer.List()
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv[1:]))
