@@ -25,6 +25,13 @@ class NoiseFilter:
     NoiseFilter takes a list of Unidentified Terms (UTs), filters out noise (garbage) and returns a (noise)filtered list of UTs
 
     """
+    # Regexes to use as a filter
+    ONLYNUM = "^[0-9]*$"
+    SPECIAL = "[/_$&+,:;{}\"=?\[\]@#|~'<>^*()%!]"
+    NON_ASCII = "[^\x00-\x7F]"
+    PUNCT = "[.?\-\",]"
+    CONSONANT_4 = "[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ]{4}"
+    VOWEL_4 = "[aAeEiIoOuU]{4}"
 
     def __init__(self, args):
 
@@ -58,6 +65,11 @@ class NoiseFilter:
             self.ACTION = args.action[0]
         else:
             print("No args supplied to NoiseFilter.")
+
+        # Create an instance of the indexer
+        self.indexer = Indexer()
+        # Index the tweets
+        self.indexer.LoadIndexes()
 
     def PerformAction(self):
         if self.ACTION == 'filter':
@@ -102,19 +114,13 @@ class NoiseFilter:
                         outputfile_noise.write(nt + '\n')
 
     def FilterNoise(self, unfiltered_input, idf_factor):
-
-        # Create an instance of the indexer
-        indexer = Indexer()
-        # Index the tweets
-        indexer.LoadIndexes()
-
-        # Regexes to use as a filter
-        ONLYNUM = "^[0-9]*$"
-        SPECIAL = "[/_$&+,:;{}\"=?\[\]@#|~'<>^*()%!]"
-        NON_ASCII = "[^\x00-\x7F]"
-        PUNCT = "[.?\-\",]"
-        CONSONANT_4 = "[bBcCdDfFgGhHjJkKlLmMnNpPqQrRsStTvVwWxXyYzZ]{4}"
-        VOWEL_4 = "[aAeEiIoOuU]{4}"
+        self.unfiltered_terms = []
+        self.filtered_terms_regex = []
+        self.filtered_terms_idf = []
+        self.noise_terms_regex = []
+        self.noise_terms_idf = []
+        self.combined_filtered_terms = []
+        self.combined_noise_terms = []
 
         for term in unfiltered_input:
 
@@ -129,12 +135,12 @@ class NoiseFilter:
             # 6. Four or more consecutive vowels, or five or more consecutive consonants.
 
             if len(term) < 3 or len(term) >= 7 \
-                    or re.search(NON_ASCII, term) is not None \
-                    or re.search(SPECIAL, term) is not None \
-                    or re.search(ONLYNUM, term) is not None \
-                    or len(re.findall(PUNCT, term)) > (len(term) - len(re.findall(PUNCT, term))) \
-                    or re.search(VOWEL_4, term) is not None \
-                    or re.search(CONSONANT_4, term) is not None:
+                    or re.search(NoiseFilter.NON_ASCII, term) is not None \
+                    or re.search(NoiseFilter.SPECIAL, term) is not None \
+                    or re.search(NoiseFilter.ONLYNUM, term) is not None \
+                    or len(re.findall(NoiseFilter.PUNCT, term)) > (len(term) - len(re.findall(NoiseFilter.PUNCT, term))) \
+                    or re.search(NoiseFilter.VOWEL_4, term) is not None \
+                    or re.search(NoiseFilter.CONSONANT_4, term) is not None:
                 self.noise_terms_regex.append(term)
             else:
                 self.filtered_terms_regex.append(term)
@@ -142,12 +148,12 @@ class NoiseFilter:
             # Get IDF term values. idf_base is the idf factor for terms that only appear once
             # in the whole collection.
             # Values lower than the idf_base can be a valid UTs, otherwise not
-            idf = indexer.GetIDFForTerm(term)
-            doccount = len(indexer.index_tweets)
+            idf = self.indexer.GetIDFForTerm(term)
+            doccount = len(self.indexer.index_tweets)
             if doccount > 0:
                 idf_base = math.log(float(doccount))
             else:
-                idf_base = 0.0
+                idf_base = 100.0
                 print("Tried to take the log of a <= 0 doccount! Was: ", doccount)
             threshold_idf = idf_factor * idf_base
 

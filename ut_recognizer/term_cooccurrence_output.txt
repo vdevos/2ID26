@@ -1,19 +1,19 @@
-etsi	via,90	sale,75	shop,75	deal,75	booth,75
-europ	time,100	pari,99	pacif,98	hour,98	berlin,98
-promo	get,78	tfb,63
-cet	pacif,98	hour,98	berlin,98	second,98	pari,98
-1thek	teach,73	yolo,73	crazi,73	danc,73	littl,73
-selfi	swag,67
-tfb	swag,82	get,63	promo,63	must,60
-edm	swag,1003	bless,998	chanc,998	djs,998	libra,998
-djs	given,998	chanc,998	bless,998	swag,998	celebr,998
+ign	liter,246	six,246	sieg,246	yolo,246
 ft.	play,81
 yolo	liter,264	six,251	sieg,248	ign,246	swag,176
-onair	fm80,90
-ign	six,246	liter,246	yolo,246	sieg,246
-mez	cet,98	pacif,98	hour,98	berlin,98	second,98
-fm80	onair,90
-djjove	given,997	libra,997	chanc,997	bless,997	djs,997
-hiphop	swag,1008	bless,998	chanc,998	djs,998	edm,998
+cet	second,98	time,98	berlin,98	pacif,98	pari,98
 lol	fun,137	swag,116	yolo,104	funni,93
+1thek	crazi,73	let,73	yolo,73	teach,73	danc,73
+edm	swag,1003	bless,998	celebr,998	libra,998	given,998
+promo	get,78	tfb,63
+onair	fm80,90
+selfi	swag,67
+europ	time,100	pari,99	pacif,98	watch,98	minut,98
 fuck	yolo,79
+djs	bless,998	libra,998	given,998	hiphop,998	edm,998
+mez	second,98	time,98	berlin,98	cet,98	pacif,98
+djjove	djs,997	hiphop,997	bless,997	chanc,997	celebr,997
+fm80	onair,90
+etsi	via,90	deal,75	sale,75	shop,75	booth,75
+hiphop	swag,1008	libra,998	bless,998	edm,998	celebr,998
+tfb	swag,82	promo,63	get,63	must,60

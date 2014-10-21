@@ -2,7 +2,14 @@ __author__ = 'Thom Hurks'
 
 import os
 import operator
+import sys
+
 from nltk.corpus import stopwords
+
+sys.path.insert(0, "../ut_tweetrank")
+from tweetrank import TweetRank
+sys.path.insert(0, "../indexer")
+from indexer import Indexer
 
 output_filename = "term_cooccurrence_output"
 output_extension = ".txt"
@@ -18,6 +25,9 @@ unidentified_terms = set()
 minimal_nr_occurrences = 60
 # The maximum nr of co-occurring words that we record per UT.
 max_words = 5
+
+tweet_indexer = Indexer()
+tweet_indexer.LoadIndexes()
 
 # First we read in all the tweets.
 if os.path.isfile(input_tweets_filename):
@@ -63,6 +73,23 @@ for tweet in tweets:
                     count += 1
                 count_dict[word] = count
         ut_cooccurrences[ut] = count_dict
+
+tweet_ranker = TweetRank(None)
+ranked_tweets = tweet_ranker.TweetRank({"yolo"})
+for (tweetid, score) in ranked_tweets:
+    print(tweet_indexer.GetTweetForTweetid(tweetid))
+
+# Write the term with corresponding ranked tweet ids & scores to file
+if False:
+    with open(self.output_filename, 'w') as outputfile:
+        for ut in unidentified_terms:
+            outputfile.write(ut + '\t')
+            number_rankings = len(self.sorted_cropped_rankings[ut])
+
+            for i in range(0, number_rankings):
+                outputfile.write(str(self.sorted_cropped_rankings[ut][i]) + '\t')
+
+            outputfile.write('\n')
 
 written = False
 file_counter = 0

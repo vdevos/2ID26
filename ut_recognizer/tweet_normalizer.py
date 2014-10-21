@@ -1,10 +1,11 @@
-__author__ = 'thom'
+__author__ = 'Thom Hurks'
 
 import sys
 sys.path.insert(0,"../ut_noisefilter")
 import nltk
 import os
 from nltk.stem import snowball
+from nltk.corpus import stopwords
 from noisefilter import NoiseFilter
 
 # WARNING: ALSO FILTERS THE TWEET TEXT!
@@ -23,6 +24,7 @@ idf_factor = 0.8
 stemmer = snowball.EnglishStemmer()
 tweets = []
 normalized_tweets = []
+stopwords_set = set(stopwords.words('english'))
 
 old_tweets = []
 
@@ -42,17 +44,21 @@ if os.path.isfile(input_tweets_filename):
 assert len(old_tweets) == len(tweets)
 
 # Tokenize the tweets with the NLTK default tokenizer.
+
+noise_filter = NoiseFilter(None)
+
 for tweet in tweets:
     tweet_tokens = nltk.word_tokenize(tweet)
     normalized_tweet = []
     # First apply stemming:
     for token in tweet_tokens:
         if len(token) > 1:
-            stemmed_token = stemmer.stem(token.lower())
-            if len(stemmed_token) > 1:
-                normalized_tweet.append(stemmed_token)
+            token_lowered = token.lower()
+            if token_lowered not in stopwords_set:
+                stemmed_token = stemmer.stem(token_lowered)
+                if len(stemmed_token) > 1:
+                    normalized_tweet.append(stemmed_token)
     # Now filter noise:
-    noise_filter = NoiseFilter(None)
     filtered_words = noise_filter.FilterNoise(normalized_tweet, idf_factor)
     if len(filtered_words) == 0:
         # To prevent missing column in output.
