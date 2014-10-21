@@ -9,8 +9,9 @@ Run `pipeline.sh` in the root directory
 ### Packages
 
 NLTK
-    1. http://www.nltk.org/install.html
-    2. Download NLTP packages
+
+1. http://www.nltk.org/install.html
+2. Download NLTP packages
 
 ### Motivation
 Content from users on Twitter is restricted to 140 characters. This introduces the use of abbreviations by these users. Also the usage of slang is quite common and because most users are human you will also see spelling mistakes. All these cases introduce so-called un- identified terms. By this we mean a word that cannot be recognized as a known word because it does not occur in a known English lexicon.
