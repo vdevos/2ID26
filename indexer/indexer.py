@@ -240,11 +240,11 @@ class Indexer:
 
     def GetIDFForTerm(self, term):
 
-        # Calculate TF*IDF for a term
+        # Calculate IDF for a term
         # http://en.wikipedia.org/wiki/Tf-idf
 
-        idf = 0.00
         doccount = float(len(self.index_tweets))
+        idf = math.log(doccount)
 
         if term in self.index_terms.keys():
             ndt = float(len(self.index_terms[term].keys()))
