@@ -88,30 +88,30 @@ class NoiseFilter:
             for line in lines:
                 term = line.strip().split('\t')[0]
                 unfiltered_terms.add(term)
-                self.FilterNoise(unfiltered_terms, self.args.idf_factor)
-                with open(self.output_filename_regex, 'w') as outputfile_regex:
-                    for ut in self.filtered_terms_regex:
-                        outputfile_regex.write(ut + '\n')
+            self.FilterNoise(unfiltered_terms, self.args.idf_factor)
+            with open(self.output_filename_regex, 'w') as outputfile_regex:
+                for ut in self.filtered_terms_regex:
+                    outputfile_regex.write(ut + '\n')
 
-                with open(self.output_filename_noise_regex, 'w') as outputfile_noise_regex:
-                    for nt in self.noise_terms_regex:
-                        outputfile_noise_regex.write(nt + '\n')
+            with open(self.output_filename_noise_regex, 'w') as outputfile_noise_regex:
+                for nt in self.noise_terms_regex:
+                    outputfile_noise_regex.write(nt + '\n')
 
-                with open(self.output_filename_idf, 'w') as outputfile_idf:
-                    for ut in self.filtered_terms_idf:
-                        outputfile_idf.write(ut + '\n')
+            with open(self.output_filename_idf, 'w') as outputfile_idf:
+                for ut in self.filtered_terms_idf:
+                    outputfile_idf.write(ut + '\n')
 
-                with open(self.output_filename_noise_idf, 'w') as outputfile_noise_idf:
-                    for nt in self.noise_terms_idf:
-                        outputfile_noise_idf.write(nt + '\n')
+            with open(self.output_filename_noise_idf, 'w') as outputfile_noise_idf:
+                for nt in self.noise_terms_idf:
+                    outputfile_noise_idf.write(nt + '\n')
 
-                with open(self.output_filename, 'w') as outputfile:
-                    for ut in self.combined_filtered_terms:
-                        outputfile.write(ut + '\n')
+            with open(self.output_filename, 'w') as outputfile:
+                for ut in self.combined_filtered_terms:
+                    outputfile.write(ut + '\n')
 
-                with open(self.output_filename_noise, 'w') as outputfile_noise:
-                    for nt in self.combined_noise_terms:
-                        outputfile_noise.write(nt + '\n')
+            with open(self.output_filename_noise, 'w') as outputfile_noise:
+                for nt in self.combined_noise_terms:
+                    outputfile_noise.write(nt + '\n')
 
     def FilterNoise(self, unfiltered_input, idf_factor):
         self.unfiltered_terms = []
