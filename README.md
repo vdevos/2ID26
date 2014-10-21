@@ -1,7 +1,7 @@
 #2ID26
 
 ### Members
-Vincent de Vos, Roy Haanen, Thom Hurks
+V.J.H. de Vos (@vdevos), Roy Haanen, Thom Hurks
 
 ### Demo instructions 
 Run `pipeline.sh` in the root directory
