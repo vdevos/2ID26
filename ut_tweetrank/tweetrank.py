@@ -101,8 +101,6 @@ class TweetRank:
         for term in unidentified_terms:
             # Get the tweets for the read term
             term_tweetids = indexer.GetTweetsForTerm(term)
-            print(term)
-            print(len(term_tweetids))
 
             # The setup is that the number of retweets, favorites and author followers need to be normalized
             # Normalisation needs maximum and minimum of each of the tweet metrics

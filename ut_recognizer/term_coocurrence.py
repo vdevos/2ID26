@@ -12,6 +12,7 @@ sys.path.insert(0, "../indexer")
 from indexer import Indexer
 
 output_filename = "term_cooccurrence_output"
+ranking_output_filename = "cooccurence_top_tweets"
 output_extension = ".txt"
 # Input files:
 input_tweets_filename = "normalized_filtered_tweets.txt"
@@ -56,6 +57,8 @@ print("Nr of unidentified terms read in: ", len(unidentified_terms))
 #print(str(unidentified_terms))
 ut_cooccurrences = dict()
 
+print("Counting co-occurrences...")
+
 # Here, we count the words that co-occur with an unidentified term.
 for tweet in tweets:
     tweet = set(tweet)
@@ -74,22 +77,7 @@ for tweet in tweets:
                 count_dict[word] = count
         ut_cooccurrences[ut] = count_dict
 
-tweet_ranker = TweetRank(None)
-ranked_tweets = tweet_ranker.TweetRank({"yolo"})
-for (tweetid, score) in ranked_tweets:
-    print(tweet_indexer.GetTweetForTweetid(tweetid))
-
-# Write the term with corresponding ranked tweet ids & scores to file
-if False:
-    with open(self.output_filename, 'w') as outputfile:
-        for ut in unidentified_terms:
-            outputfile.write(ut + '\t')
-            number_rankings = len(self.sorted_cropped_rankings[ut])
-
-            for i in range(0, number_rankings):
-                outputfile.write(str(self.sorted_cropped_rankings[ut][i]) + '\t')
-
-            outputfile.write('\n')
+print("Writing co-occurrence file...")
 
 written = False
 file_counter = 0
@@ -112,6 +100,32 @@ while not written:
                         word_counter += 1
                 if word_counter >= 1:
                     outputfile.write(line + newline)
+            written = True
+    except FileExistsError:
+        file_counter += 1
+
+print("Ranking tweets...")
+
+# Create the Tweet Ranker:
+ranked_tweets_list = []
+tweet_ranker = TweetRank(None)
+for ut in ut_cooccurrences.keys():
+    ranked_tweets = tweet_ranker.TweetRank({ut})
+    for (tweetid, score) in ranked_tweets:
+        tweet = tweet_indexer.GetTweetForTweetid(tweetid)
+        ranked_tweets_list.append(str(ut) + tab + str(tweet))
+    print("Ranked ut: ", ut)
+
+print("Writing ranking file...")
+
+written = False
+file_counter = 0
+while not written:
+    try:
+        # The 'w' means open for exclusive creation, failing if the file already exists.
+        with open(ranking_output_filename + str(file_counter) + output_extension, 'x') as outputfile:
+            for tweet in ranked_tweets_list:
+                outputfile.write(str(tweet) + newline)
             written = True
     except FileExistsError:
         file_counter += 1
